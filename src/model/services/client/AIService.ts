@@ -39,8 +39,8 @@ export class AIServiceClass implements AIChatService {
             functionResponses: await Promise.all(
               functionCalls.map(async (call) => {
                 const command = CommandsRegistry.get(call.name);
-                const result = await command?.(call.args).catch((error) =>
-                  JSON.stringify(error)
+                const result = await command?.(call.args).catch(
+                  (error) => error
                 );
                 return {
                   id: "",
@@ -48,7 +48,7 @@ export class AIServiceClass implements AIChatService {
                   response: {
                     name: call.name,
                     content: command
-                      ? result
+                      ? JSON.stringify(result)
                       : "Error: such function does not exist.",
                   },
                 };
@@ -66,11 +66,14 @@ export class AIServiceClass implements AIChatService {
       return response.text;
     } catch (error) {
       await miro.board.notifications.showError(
-        "Sorry, your request could not be processed. Please try again."
+        `Sorry, your request could not be processed. Please try again.`
       );
       console.error(error);
       await this.clear();
-      this.#emitHistory(await this.getHistory());
+      this.#emitHistory([
+        ...(await this.getHistory()),
+        { role: "error", parts: [{ text: (error as Error).message }] },
+      ]);
       return "";
     }
   }

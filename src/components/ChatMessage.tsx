@@ -11,7 +11,20 @@ type ChatMessageProps = {
 
 const modelColor = 'rgba(169, 161, 249, 0.1)';
 const userColor = 'rgba(134, 184, 255, 0.1)';
+const errorColor = 'rgba(255, 0, 0, 0.1)';
 const shadowColor = 'rgba(36, 38, 44, 0.2)';
+
+const colors = {
+  model: modelColor,
+  user: userColor,
+  error: errorColor,
+};
+
+const type = {
+  model: '✦ MiroBot',
+  user: 'You',
+  error: 'Error',
+};
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   return (
@@ -21,7 +34,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           key={p_index + "-box"}
           css={{
             backgroundColor:
-              message.role === "user" ? userColor : modelColor,
+              colors[message.role as keyof typeof colors] ?? modelColor,
             border: `1px solid ${shadowColor}`,
             boxShadow: `3px 3px ${shadowColor}`,
             padding: 15,
@@ -34,9 +47,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             weight="bold"
             css={{ paddingBottom: 8 }}
           >
-            {message.role === "user" ? "You" : "✦ MiroBot"}
+            {type[message.role as keyof typeof type] ?? type.model}
           </Paragraph>
-
           <Markdown key={p_index + "-p2"} className="message">{part.text}</Markdown>
         </Box>
       ))}
