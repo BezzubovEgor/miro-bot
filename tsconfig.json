@@ -22,7 +22,8 @@
     "composite": true,
     "typeRoots": [
       "./node_modules/@types",
-      "./node_modules/@mirohq"
+      "./node_modules/@mirohq",
+      "./node_modules/@google"
     ],
     "allowJs": true,
     "incremental": true,

@@ -1,7 +1,5 @@
-import React, { PropsWithChildren } from 'react';
 import Script from 'next/script';
-
-import { App } from '../components/App';
+import React, { PropsWithChildren } from 'react';
 
 export default function RootLayout({ children }: PropsWithChildren) {
   return (
@@ -12,7 +10,6 @@ export default function RootLayout({ children }: PropsWithChildren) {
           strategy="beforeInteractive"
         />
         <div id="root">
-          <App />
           {children}
         </div>
       </body>

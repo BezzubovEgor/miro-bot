@@ -1,5 +1,6 @@
 import { AIRequest, AIResponse } from "../../types/ai";
 import { AIHistory } from "../../types/aiChatService";
+import type { Session } from "../../types/session";
 
 export abstract class AIAgent {
   protected name: string;
@@ -12,12 +13,9 @@ export abstract class AIAgent {
     return this.name;
   }
 
-  abstract sendMessage(
-    input: AIRequest,
-    sessionId: string
-  ): Promise<AIResponse>;
+  abstract sendMessage(input: AIRequest, session: Session): Promise<AIResponse>;
 
-  abstract getHistory(sessionId: string): Promise<AIHistory>;
+  abstract getHistory(session: Session): Promise<AIHistory>;
 
-  abstract clearHistory(sessionId: string): Promise<void>;
+  abstract clearHistory(session: Session): Promise<void>;
 }

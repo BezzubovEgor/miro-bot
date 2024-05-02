@@ -3,25 +3,22 @@ import { FC, KeyboardEventHandler, useEffect, useRef, useState } from "react";
 
 import {
   Flex,
-  IconButton,
   IconTrash,
   IconSparksFilled,
   IconPlusSquare,
-  Textarea,
-  Select,
-  Heading
 } from "@mirohq/design-system";
 
 import { AIService } from "../model/services/client/AIService";
 import { AIHistory } from "../model/types/aiChatService";
-import { AgentSelector } from "../model/services/client/AgentSelector";
+import { AgentSelector, type Agent } from "../model/services/client/AgentSelector";
 import { Loader } from "./Loader";
-import { VoiceCommand } from "./VoiceCommand";
 import ChatHistory from "./ChatHistory";
+import { Textarea } from "./overrides/Textarea";
+import { IconButton } from "./overrides/IconButton";
+import { Select } from "./overrides/Select";
+import { Header } from "./atoms/Header";
 
-const buttonStyle = { borderRadius: 0, border: '1px solid #24262C', boxShadow: "2px 2px #24262C" };
-
-export const App: FC = () => {
+export const Chat: FC = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<HTMLElement>(null);
@@ -37,19 +34,9 @@ export const App: FC = () => {
     });
 
     AIService.getHistory().then(setChatHistory);
-    AIService.onHistoryUpdate((history) => {
-      console.log('History updated!', history);
-      setChatHistory(history);
-    });
-
-    console.log('BEFORE DROP');
+    AIService.onHistoryUpdate(setChatHistory);
 
     setAgent(AgentSelector.getSelectedAgent());
-
-    miro.board.ui.on('drop', async ({ x, y }) => {
-      // In this example: when the HTML element is dropped on the board, a sticky note is created
-      console.log({ x, y });
-    });
   }, []);
 
   const onSubmit = async (e: { preventDefault: () => void; } | undefined) => {
@@ -71,7 +58,6 @@ export const App: FC = () => {
       setTimeout(() => {
         historyRef.current?.scrollTo({
           top: historyRef.current.scrollHeight,
-          // behavior: 'smooth',
         });
         inputRef.current?.focus();
       }, 200);
@@ -103,24 +89,17 @@ export const App: FC = () => {
 
   const onAgentChange = async (value: string) => {
     AIService.clear();
-    setAgent(value as "gemini" | "claude");
-    AgentSelector.setSelectedAgent(value as "gemini" | "claude");
+    setAgent(value as Agent);
+    AgentSelector.setSelectedAgent(value as Agent);
   };
-
-  // "#86b8ff", "#aca3ff", "#cdff79", "#fe8080";
-  const colors = ["#86b8ff", "#aca3ff"];
-  const weights = ["bold", "normal"];
-
-  const getRandColor = () => colors[Math.floor(Math.random() * colors.length)];
-  const getRandWeight = () => weights[Math.floor(Math.random() * weights.length)];
 
   return (
     <Flex direction="column" justify="between" css={{ height: "100%" }}>
       {chatHistory.length === 0 &&
         <Flex css={{ height: '100%' }} justify="center" align="center">
-          <Heading css={{ padding: 40, color: "$gray-300", textAlign: 'right' }} level={2}>
-            {'You can ask MiroBot about anything, including manipulation of board content!'.split(' ').map((word, i) => <span key={i} style={{ color: getRandColor(), fontWeight: getRandWeight() }}>{word} </span>)}
-          </Heading>
+          <Header>
+            You can ask MiroBot about anything, including manipulation of board content!
+          </Header>
         </Flex>
       }
       <Flex
@@ -175,12 +154,10 @@ export const App: FC = () => {
                 variant="outline"
                 title="Clear"
                 onPress={onCleanup}
-                css={buttonStyle}
                 disabled={isProcessing}
               >
                 <IconTrash />
               </IconButton>
-              <VoiceCommand css={buttonStyle} disabled={isProcessing} />
               <input
                 ref={fileInputRef}
                 type="file"
@@ -196,20 +173,19 @@ export const App: FC = () => {
                 variant="outline"
                 title="Attach"
                 onPress={onUploadClick}
-                css={buttonStyle}
                 disabled={isProcessing}
               >
                 <IconPlusSquare />
               </IconButton>
 
-              <Select value={agent} onValueChange={onAgentChange} css={buttonStyle} disabled={isProcessing}>
-                <Select.Trigger size='large' css={buttonStyle}>
+              <Select value={agent} onValueChange={onAgentChange} disabled={isProcessing}>
+                <Select.Trigger size='large'>
                   <Select.Value placeholder='Select agent' />
                 </Select.Trigger>
                 <Select.Portal>
                   <Select.Content>
-                    <Select.Item value='gemini'>Gemini</Select.Item>
-                    <Select.Item value='claude'>Claude</Select.Item>
+                    <Select.Item value='gemini-1.0'>Gemini 1.0</Select.Item>
+                    <Select.Item value='gemini-1.5'>Gemini 1.5</Select.Item>
                   </Select.Content>
                 </Select.Portal>
               </Select>
@@ -219,7 +195,6 @@ export const App: FC = () => {
               variant="solid-prominent"
               disabled={isProcessing}
               title="Send"
-              css={buttonStyle}
             >
               <IconSparksFilled />
             </IconButton>

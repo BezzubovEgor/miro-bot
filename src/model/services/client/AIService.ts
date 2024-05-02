@@ -32,24 +32,24 @@ export class AIServiceClass implements AIChatService {
       );
 
       while (response.type === "function_call") {
-        console.log({ response });
         const functionCalls = response.calls;
-
-        console.log(`[Function call]: ${JSON.stringify(functionCalls)}`);
-        const response2 = await sendMessage(
+        response = await sendMessage(
           {
             type: "function_response",
             functionResponses: await Promise.all(
               functionCalls.map(async (call) => {
                 const command = CommandsRegistry.get(call.name);
+                const result = await command?.(call.args).catch((error) =>
+                  JSON.stringify(error)
+                );
                 return {
                   id: "",
                   name: call.name,
                   response: {
                     name: call.name,
                     content: command
-                      ? JSON.stringify(await command(call.args))
-                      : "not content was returned, simply answer the action!",
+                      ? result
+                      : "Error: such function does not exist.",
                   },
                 };
               })
@@ -57,14 +57,11 @@ export class AIServiceClass implements AIChatService {
           },
           agent
         );
-        response = response2;
       }
 
       if (response.type === "empty") {
         return "Sorry, I don't know how to respond to that.";
       }
-
-      console.log(`\n[Response]: `, response, await this.getHistory());
       this.#emitHistory(await this.getHistory());
       return response.text;
     } catch (error) {
@@ -79,13 +76,7 @@ export class AIServiceClass implements AIChatService {
   }
 
   async getHistory() {
-    try {
-      console.log(await getHistory(AgentSelector.getSelectedAgent()))
-      return getHistory(AgentSelector.getSelectedAgent());
-    } catch (e) {
-      console.error('EEEE', e)
-      return []
-    }
+    return getHistory(AgentSelector.getSelectedAgent());
   }
 
   async clear() {

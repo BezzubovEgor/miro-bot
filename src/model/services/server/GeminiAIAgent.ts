@@ -10,6 +10,8 @@ import {
   FunctionDeclarationSchemaType,
   FunctionResponse,
   Part,
+  GenerativeModel,
+  type GoogleGenerativeAIFetchError,
 } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/files";
 
@@ -17,24 +19,49 @@ import { schemas } from "../../schemas";
 import { AIRequest, AIResponse, FunctionCallSchema } from "../../types/ai";
 import { JSONSchemaTypeName } from "../../types/jsonSchema";
 import { AIHistoryItem } from "../../types/aiChatService";
+import type { Session } from "../../types/session";
+import { AIError } from "../../errors/AI";
 import { config } from "../config";
 import { AIAgent } from "./AIAgent";
 
-export class GeminiAIAgent extends AIAgent {
-  #fileManager = new GoogleAIFileManager(config.AI_API_KEY);
-  #model = new GoogleGenerativeAI(config.AI_API_KEY).getGenerativeModel(
-    {
-      model: config.AI_MODEL_NAME,
-    },
-    { apiVersion: "v1beta" }
-  );
-  #sessions = new Map<string, ChatSession>();
+type FileManager = typeof GoogleAIFileManager;
 
-  constructor() {
+export class GeminiAIAgent extends AIAgent {
+  #model: string;
+  #sessions = new Map<string, ChatSession>();
+  #clients = new Map<string, { model: GenerativeModel; files: FileManager }>();
+
+  constructor(model = config.AI_MODEL_NAME) {
     super("gemini");
+    this.#model = model;
   }
 
-  #createChatSession(history = config.AI_SYSTEM_PROMPT): ChatSession {
+  #handleError = (error: GoogleGenerativeAIFetchError) => {
+    if (error.errorDetails?.[0]?.reason === "API_KEY_INVALID") {
+      throw new AIError("API key is invalid", "API_KEY_INVALID");
+    }
+    throw new AIError(error.message, "unknown", error.errorDetails);
+  };
+
+  #getOrCreateClient(session: Session) {
+    if (!this.#clients.has(session.token)) {
+      this.#clients.set(session.token, {
+        model: new GoogleGenerativeAI(session.token).getGenerativeModel(
+          {
+            model: this.#model,
+          },
+          { apiVersion: "v1beta" }
+        ),
+        files: new GoogleAIFileManager(session.token),
+      });
+    }
+    return this.#clients.get(session.token)!;
+  }
+
+  #createChatSession(
+    session: Session,
+    history = config.AI_SYSTEM_PROMPT
+  ): ChatSession {
     const generationConfig = {
       temperature: 0,
       topK: 1,
@@ -70,7 +97,9 @@ export class GeminiAIAgent extends AIAgent {
         : {};
     };
 
-    const chat = this.#model.startChat({
+    const client = this.#getOrCreateClient(session);
+
+    const chat = client.model.startChat({
       generationConfig,
       safetySettings: config.AI_CHAT_SAFETY_SETTINGS,
       history: [...history],
@@ -94,11 +123,11 @@ export class GeminiAIAgent extends AIAgent {
     return chat;
   }
 
-  async getHistory(sessionId: string) {
-    if (this.#sessions.has(sessionId)) {
-      const session = this.#sessions.get(sessionId);
-      if (session) {
-        return (await session.getHistory())
+  async getHistory(session: Session) {
+    if (this.#sessions.has(session.sessionId)) {
+      const chatSession = this.#sessions.get(session.sessionId);
+      if (chatSession) {
+        return (await chatSession.getHistory())
           .slice(2)
           .filter(
             (message) =>
@@ -120,13 +149,13 @@ export class GeminiAIAgent extends AIAgent {
     return [];
   }
 
-  async clearHistory(sessionId: string): Promise<void> {
-    this.#sessions.set(sessionId, this.#createChatSession());
+  async clearHistory(session: Session): Promise<void> {
+    this.#sessions.set(session.sessionId, this.#createChatSession(session));
   }
 
-  async sendMessage(input: AIRequest, sessionId: string): Promise<AIResponse> {
-    if (!this.#sessions.has(sessionId)) {
-      this.#sessions.set(sessionId, this.#createChatSession());
+  async sendMessage(input: AIRequest, session: Session): Promise<AIResponse> {
+    if (!this.#sessions.has(session.sessionId)) {
+      this.#sessions.set(session.sessionId, this.#createChatSession(session));
     }
 
     let fileResult;
@@ -134,24 +163,21 @@ export class GeminiAIAgent extends AIAgent {
     if (input.type === "text" && input.file) {
       const fileName = `temp-${Math.random().toString(36).substring(2, 15)}`;
       const tempFilename = join(tmpdir(), `${fileName}.jpg`);
-      console.log("path", tempFilename);
       await writeFile(tempFilename, Buffer.from(input.file), { flag: "wx" });
-      console.log("file was created");
+      const { files } = this.#getOrCreateClient(session);
 
-      fileResult = await this.#fileManager.uploadFile(tempFilename, {
-        mimeType: "image/jpeg",
-        name: fileName,
-        displayName: fileName,
-      });
-      console.log("Result", fileResult);
+      fileResult = await files
+        .uploadFile(tempFilename, {
+          mimeType: "image/jpeg",
+          name: fileName,
+          displayName: fileName,
+        })
+        .catch(this.#handleError);
     }
 
-    const session = this.#sessions.get(sessionId);
+    const chatSession = this.#sessions.get(session.sessionId);
 
-    console.log(await this.getHistory(sessionId));
-    console.log(JSON.stringify((await this.getHistory(sessionId)).at(-1)));
-
-    if (session) {
+    if (chatSession) {
       const message =
         input.type === "text"
           ? [
@@ -175,14 +201,9 @@ export class GeminiAIAgent extends AIAgent {
                 },
               })
             );
-
-      console.log(
-        "[Server current request]",
-        input.type,
-        JSON.stringify(message)
-      );
-
-      const result = await session.sendMessage(message);
+      const result = await chatSession
+        .sendMessage(message)
+        .catch(this.#handleError);
       const response = result.response;
       const responseText = response.text();
       const responseJson = JSON.parse(JSON.stringify(response));
@@ -195,19 +216,18 @@ export class GeminiAIAgent extends AIAgent {
       const responseParts = responseJson?.candidates?.[0]?.content?.parts;
       if (responseParts?.some((part: any) => part.functionCall)) {
         const newParts = responseParts.filter((part: any) => part.functionCall);
-        const history = await this.#sessions.get(sessionId)?.getHistory();
+        const history = await this.#sessions
+          .get(session.sessionId)
+          ?.getHistory();
         const latestHistoryItem = history?.at(-1);
         if (latestHistoryItem) {
           latestHistoryItem.parts = newParts as Part[];
-          this.#sessions.set(sessionId, this.#createChatSession(history));
+          this.#sessions.set(
+            session.sessionId,
+            this.#createChatSession(session, history)
+          );
         }
       }
-
-      console.log("[Server Response]", JSON.stringify(response));
-      console.log(
-        "[Server Response function call]",
-        JSON.stringify(functionCalls || "no function")
-      );
 
       if (functionCalls.some((call) => !!call)) {
         return {
@@ -217,13 +237,18 @@ export class GeminiAIAgent extends AIAgent {
       }
 
       if (!responseParts?.length) {
-        const history = await this.#sessions.get(sessionId)?.getHistory();
+        const history = await this.#sessions
+          .get(session.sessionId)
+          ?.getHistory();
         if (history) {
           history.push(
             { role: "user", parts: [message as unknown as Part] },
             { role: "model", parts: [{ text: "done!" }] }
           );
-          this.#sessions.set(sessionId, this.#createChatSession(history));
+          this.#sessions.set(
+            session.sessionId,
+            this.#createChatSession(session, history)
+          );
         }
       }
 

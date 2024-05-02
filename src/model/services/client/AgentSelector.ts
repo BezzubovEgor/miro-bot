@@ -1,18 +1,19 @@
 const DEFAULT_AGENT = "gemini";
 
+export type Agent = "gemini" | "gemini-1.0" | "gemini-1.5";
+
 class AgentSelectorClass {
   private selectedAgentKey = "selectedAgent";
 
   constructor() {}
 
-  getSelectedAgent(): "gemini" | "claude" {
+  getSelectedAgent(): Agent {
     return (
-      (localStorage.getItem(this.selectedAgentKey) as "gemini" | "claude") ??
-      DEFAULT_AGENT
+      (localStorage.getItem(this.selectedAgentKey) as Agent) ?? DEFAULT_AGENT
     );
   }
 
-  setSelectedAgent(model: "gemini" | "claude"): void {
+  setSelectedAgent(model: Agent): void {
     localStorage.setItem(this.selectedAgentKey, model);
   }
 }
