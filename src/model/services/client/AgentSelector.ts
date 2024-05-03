@@ -1,4 +1,4 @@
-const DEFAULT_AGENT = "gemini";
+const DEFAULT_AGENT = "gemini-1.0";
 
 export type Agent = "gemini" | "gemini-1.0" | "gemini-1.5";
 

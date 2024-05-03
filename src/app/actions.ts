@@ -8,7 +8,7 @@ import { getSession, createSession } from "../utils/server/session";
 import { AIError } from "../model/errors/AI";
 
 const agents = {
-  gemini: new GeminiAIAgent(),
+  gemini: new GeminiAIAgent("gemini-1.0-pro-latest"),
   "gemini-1.0": new GeminiAIAgent("gemini-1.0-pro-latest"),
   "gemini-1.5": new GeminiAIAgent("gemini-1.5-pro-latest"),
 };
