@@ -31,7 +31,7 @@ function handleAIError(error: Error) {
 
 export async function auth(token: string, saveOnDevice = false) {
   createSession(token, saveOnDevice);
-  redirect("/", RedirectType.replace);
+  redirect("/panel", RedirectType.replace);
 }
 
 export async function sendMessage(
