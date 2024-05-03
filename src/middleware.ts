@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isAuthorized } from "./utils/server/session";
 
-const protectedRoutes = ["/"];
+const protectedRoutes = ["/panel"];
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
