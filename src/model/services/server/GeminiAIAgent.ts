@@ -13,6 +13,7 @@ import {
   GenerativeModel,
   type GoogleGenerativeAIFetchError,
 } from "@google/generative-ai";
+// @ts-ignore
 import { GoogleAIFileManager } from "@google/generative-ai/files";
 
 import { schemas } from "../../schemas";

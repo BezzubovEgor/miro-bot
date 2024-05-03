@@ -77,13 +77,13 @@ export const CommandsRegistry = new Map<
     "startTimer",
     async (payload: any) => await miro.board.timer.start(payload.duration)
   )
-  .set("stopTimer", async (payload: any) => await miro.board.timer.stop())
-  .set("resumeTimer", async (payload: any) => await miro.board.timer.resume())
+  .set("stopTimer", async () => await miro.board.timer.stop())
+  .set("resumeTimer", async () => await miro.board.timer.resume())
   .set(
     "prolongTimer",
     async (payload: any) => await miro.board.timer.prolong(payload.duration)
   )
-  .set("getSelection", async (payload: any) => {
+  .set("getSelection", async () => {
     return await miro.board.getSelection();
   })
   .set(
@@ -104,7 +104,7 @@ export const CommandsRegistry = new Map<
     async (payload: any) =>
       (await miro.board.viewport.set(payload)) ?? "success"
   )
-  .set("viewportGet", async (payload: any) => await miro.board.viewport.get())
+  .set("viewportGet", async () => await miro.board.viewport.get())
   .set("drawChartOrDiagram", async (payload: any) =>
     createMermaidDiagram(payload)
   );

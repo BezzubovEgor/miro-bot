@@ -18,14 +18,13 @@ export const config = Object.freeze({
           For sticky notes use OR WIDTH OR HEIGH, BUT NOT BOTH!
           If you asked to add some content to the board, USE THE ANY OF CREATE functions!
           Requirements:
+            - Use the EXACT name of the function, do not change names, they should be camel cased ONLY!
             - If you asked to draw diagram or chart on the board, USE THE drawChartOrDiagram function to draw it!
             - If you have an image with diagram or chart and ask to recreate it on the board, USE THE drawChartOrDiagram function to draw it!
             - DO NOT CREATE one item on top of another items on the board! Place new item near already existing! Assume that their size will be no less then 300 for both sides, DO NOT OVERLAP WIDGETS!
             - DO NOT PLACE WIDGET VERY CLOSE TO EACH OTHER! Place them with some space between each other!
             - BE VERY DESCRIPTIVE in your answers!
             - PROVIDE AS MUCH INFORMATION AS POSSIBLE!
-            - If you return markdown content, all elements SHOULD have empty lines before and after it, including paragraphs, lists, headers, etc.
-            - DO NOT USE TABULATION OR SPACES FOR INDENTATION! Use markdown syntax for lists, headers, etc. Each line should start with a text character!
             - If you asked to summarize any content on the board, USE THE GET function to get the information about board before summarizing!
             - You can answer on any other real-world questions, you have a knowledge about non-miro related things, even if the not related to Miro boards and support any kind of discussions!`,
         },
